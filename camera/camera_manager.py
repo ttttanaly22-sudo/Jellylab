@@ -72,7 +72,7 @@ class CameraManager:
     # capture
     # -----------------------------
 
-    def capture(self, label=""):
+    def capture(self, label="", output_dir=IMAGE_DIR):
 
         with self.lock:
 
@@ -107,10 +107,10 @@ class CameraManager:
                 cv2.LINE_AA
             )
 
-        filename = (
-            Path(IMAGE_DIR)
-            / f"{prefix}{datetime.now():%Y%m%d_%H%M%S}.jpg"
-        )
+        directory = Path(output_dir)
+        directory.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = directory / (prefix + stamp + ".jpg")
 
 
         success = cv2.imwrite(

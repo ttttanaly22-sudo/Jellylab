@@ -28,5 +28,6 @@ LOG_DIR = "data"
 # -----------------------------
 
 IMAGE_DIR = "images"
+MICROSCOPE_IMAGE_DIR = "micro_images"
 LOG_DIR = "logs"
 DATA_DIR = "data"

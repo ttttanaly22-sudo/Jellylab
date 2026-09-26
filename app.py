@@ -1,4 +1,4 @@
-from flask import (
+﻿from flask import (
     Flask,
     Response,
     send_file,
@@ -16,6 +16,7 @@ from managers.logger_manager import start_logger
 from camera.camera_manager import CameraManager
 from managers.system_manager import get_storage
 from managers.image_manager import get_image_count
+from config import MICROSCOPE_IMAGE_DIR
 
 
 app = Flask(__name__)
@@ -47,7 +48,13 @@ def generate():
 
 
 @app.route("/")
-def index():
+def home():
+
+    return render_template("home.html")
+
+
+@app.route("/jellylab")
+def jellylab():
 
     status = get_status()
 
@@ -57,6 +64,40 @@ def index():
         lux=status["lux"]
     )
 
+
+@app.route("/microscope")
+def microscope():
+
+    return render_template("microscope.html")
+
+
+@app.route("/microscope/capture", methods=["POST"])
+def microscope_capture():
+
+    filename = camera.capture(output_dir=MICROSCOPE_IMAGE_DIR)
+
+    if filename is None:
+        return jsonify(
+            {
+                "ok": False,
+                "message": "保存に失敗しました"
+            }
+        ), 500
+
+    return send_file(
+        filename,
+        mimetype="image/jpeg",
+        as_attachment=True,
+        download_name=filename.name
+    )
+
+
+@app.route("/micro_images/<filename>")
+def serve_micro_image(filename):
+
+    return send_file(
+        Path(MICROSCOPE_IMAGE_DIR) / filename
+    )
 
 
 @app.route("/video")
@@ -80,7 +121,7 @@ def capture():
         return jsonify(
             {
                 "ok":False,
-                "message":"画像保存に失敗しました"
+                "message":"逕ｻ蜒丈ｿ晏ｭ倥↓螟ｱ謨励＠縺ｾ縺励◆"
             }
         ),500
 
@@ -158,7 +199,7 @@ def timeline(prefix):
 
         else:
 
-            # 通常タイムラインではDEL済みを除外
+            # 騾壼ｸｸ繧ｿ繧､繝繝ｩ繧､繝ｳ縺ｧ縺ｯDEL貂医∩繧帝勁螟・
             if is_deleted:
                 continue
 
@@ -211,7 +252,7 @@ def timeline(prefix):
 
             display_time = name
 
-        # DEL_1A_... の場合も元グループを取得
+        # DEL_1A_... 縺ｮ蝣ｴ蜷医ｂ蜈・げ繝ｫ繝ｼ繝励ｒ蜿門ｾ・
         original_name = name
 
         if is_deleted:
@@ -239,7 +280,7 @@ def timeline(prefix):
             }
         )
 
-    # 日付を正しく新しい順に並べる
+    # 譌･莉倥ｒ豁｣縺励￥譁ｰ縺励＞鬆・↓荳ｦ縺ｹ繧・
     images.sort(
         key=lambda x: x["time"],
         reverse=True
@@ -470,3 +511,4 @@ if __name__ == "__main__":
         port=5000,
         debug=False
     )
+

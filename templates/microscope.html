@@ -1,0 +1,42 @@
+﻿<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Microscope</title>
+    <style>
+        body { font-family: sans-serif; margin: 32px; }
+        .panel { max-width: 700px; margin: 0 auto; }
+        .box { border: 1px solid #dfe5ec; border-radius: 12px; background: #fff; padding: 20px; }
+        .row { margin: 16px 0; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        select, button { font-size: 16px; padding: 10px 14px; }
+        button { background: #1fa67a; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        a { display: inline-block; margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h1>顕微鏡モード</h1>
+        <div class="box">
+            <div class="row">
+                <label for="quality">品質</label>
+                <select id="quality">
+                    <option value="preview">Preview</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+            <form action="/microscope/capture" method="post" target="_blank">
+                <div class="row">
+                    <button type="submit">撮影してダウンロード</button>
+                </div>
+            </form>
+            <div class="row">
+                <p>この画面は入口分離のための簡易モジュールです。実際の撮影機能は既存のカメラ制御を再利用して拡張します。</p>
+            </div>
+            <a href="/">ホームへ戻る</a>
+        </div>
+    </div>
+</body>
+</html>
