@@ -1,0 +1,36 @@
+# /etc/systemd/system/jellylab.service
+Linux raspi 6.18.34+rpt-rpi-v8 #1 SMP PREEMPT Debian 1:6.18.34-1+rpt1 (2026-06-09) aarch64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Last login: Thu Aug 13 12:31:56 2026 from fe80::9610:2fe7:fa5d:f371%wlan0
+pi@raspi:~ $ sudo systemctl cat jellylab
+# /etc/systemd/system/jellylab.service
+[Unit]
+Description=JellyLab Flask Server
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/Projects/JellyLab
+ExecStart=/usr/bin/python3 /home/pi/Projects/JellyLab/app.py
+lines 1-9...skipping...
+# /etc/systemd/system/jellylab.service
+[Unit]
+Description=JellyLab Flask Server
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/Projects/JellyLab
+ExecStart=/usr/bin/python3 /home/pi/Projects/JellyLab/app.py
+ExecStartPre=/bin/sleep 5
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
