@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1">
+
+<title>
+{{prefix}} Timeline
+</title>
+
+
+<style>
+
+body{
+    font-family:sans-serif;
+    text-align:center;
+    margin:5px;
+}
+
+
+img{
+    width:95%;
+    max-width:900px;
+    display:block;
+    margin:auto;
+}
+
+
+.item{
+    margin-bottom:15px;
+}
+
+
+.date{
+    font-size:16px;
+    margin:3px;
+    text-align:left;
+}
+
+
+.control{
+
+    margin-top:5px;
+
+}
+
+
+button{
+
+    font-size:16px;
+    padding:5px 15px;
+    margin:3px;
+
+}
+
+
+select{
+
+    font-size:16px;
+    padding:5px;
+
+}
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<h1>
+🪼 {{prefix}} Timeline
+</h1>
+
+
+<div class="navigation">
+
+    <a href="/">
+        ← JellyLabに戻る   
+    </a>
+
+    {% if next_prefix %}
+
+        <a href="/timeline/{{next_prefix}}">
+            次へ：{{next_prefix}} →
+        </a>
+
+    {% endif %}
+
+</div>
+
+
+
+{% for img in images %}
+
+<div class="item">
+
+
+    <div class="date">
+
+        {{img.time}}
+
+    </div>
+
+
+
+    <img src="{{img.path}}">
+
+
+
+    <div class="control">
+
+{% if img.deleted %}
+
+    <button
+    onclick="
+    restoreImage('{{img.name}}');
+    return false;
+    ">
+    復元
+    </button>
+
+{% else %}
+
+    <select id="prefix_{{loop.index}}">
+
+        {% for dish in ["1","2","3","4"] %}
+
+            {% for polyp in ["A","B","C","D","E"] %}
+
+                <option
+                value="{{dish}}{{polyp}}"
+                {% if img.prefix == dish + polyp %}
+                selected
+                {% endif %}
+                >
+
+                {{dish}}{{polyp}}
+
+                </option>
+
+            {% endfor %}
+
+        {% endfor %}
+
+        </select>
+
+
+
+        <button
+        onclick="
+        moveImage(
+            '{{img.name}}',
+            'prefix_{{loop.index}}'
+        );
+        return false;
+        ">
+
+        グループ移動
+
+        </button>
+
+
+
+        <button
+        onclick="
+        deleteImage('{{img.name}}');
+        return false;
+        ">
+
+        削除
+
+        </button>
+{% endif %}
+
+    </div>
+
+
+</div>
+
+
+{% endfor %}
+
+
+
+
+<script>
+
+
+async function moveImage(filename, selectId){
+
+
+    const prefix =
+        document.getElementById(selectId).value;
+
+
+
+    if(!confirm(
+        filename +
+        "\n→ " +
+        prefix +
+        "へ移動しますか？"
+    )){
+
+        return;
+
+    }
+
+
+
+    const form = new FormData();
+
+
+    form.append(
+        "filename",
+        filename
+    );
+
+
+    form.append(
+        "prefix",
+        prefix
+    );
+
+
+
+    await fetch(
+        "/image/move",
+        {
+            method:"POST",
+            body:form
+        }
+    );
+
+
+
+    location.reload();
+
+
+}
+
+
+async function restoreImage(filename){
+
+    if(!confirm(
+        filename +
+        "\nを復元しますか？"
+    )){
+        return;
+    }
+
+    const form = new FormData();
+
+    form.append(
+        "filename",
+        filename
+    );
+
+    const response = await fetch(
+        "/image/restore",
+        {
+            method:"POST",
+            body:form
+        }
+    );
+
+    const data = await response.json();
+
+    if(!response.ok){
+
+        alert(
+            "復元できませんでした：" +
+            data.result
+        );
+
+        return;
+    }
+
+    location.reload();
+}
+
+
+async function deleteImage(filename){
+
+
+    if(!confirm(
+        "削除しますか？"
+    )){
+
+        return;
+
+    }
+
+
+
+    const form = new FormData();
+
+
+    form.append(
+        "filename",
+        filename
+    );
+
+
+
+    await fetch(
+        "/image/delete",
+        {
+            method:"POST",
+            body:form
+        }
+    );
+
+
+
+    location.reload();
+
+
+}
+
+
+</script>
+
+
+</body>
+
+</html>

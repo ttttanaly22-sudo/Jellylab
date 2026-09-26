@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1">
+
+<title>JellyLab</title>
+
+
+<style>
+
+body{
+    font-family:sans-serif;
+    text-align:center;
+    margin:10px;
+}
+
+
+.title{
+
+    font-size:24px;
+    font-weight:bold;
+    margin:10px;
+
+}
+
+
+.section{
+
+    font-size:18px;
+    font-weight:bold;
+    margin-top:15px;
+    margin-bottom:5px;
+
+}
+
+
+.value{
+
+    font-size:20px;
+    margin:5px;
+
+}
+
+
+.status{
+
+    font-size:18px;
+    margin:5px;
+
+}
+
+
+img{
+
+    width:100%;
+    max-width:800px;
+
+}
+
+
+button{
+
+    font-size:24px;
+    padding:10px 35px;
+
+}
+
+
+select{
+
+    font-size:20px;
+
+}
+
+
+#previewLabel{
+
+    position:absolute;
+
+    left:5px;
+    top:5px;
+
+    color:red;
+
+    font-size:20px;
+
+    font-weight:bold;
+
+    pointer-events:none;
+
+}
+
+
+
+table{
+
+    margin:10px auto;
+
+    border-collapse:collapse;
+
+}
+
+
+th,td{
+
+    border:1px solid #777;
+
+    padding:5px 10px;
+
+    text-align:center;
+
+}
+
+
+th{
+
+    background:#eee;
+
+}
+
+
+
+.result{
+
+    margin:10px;
+
+    font-size:18px;
+
+}
+
+
+
+canvas{
+
+    max-width:900px;
+
+}
+
+
+</style>
+</head>
+<body>
+<div class="title">
+🪼 JellyLab
+</div>
+<div class="status">
+💾 Storage
+<span id="storage">
+取得中
+</span>
+</div>
+<div class="result">
+<span id="captureResult"></span>
+</div>
+<div style="position:relative;display:inline-block">
+<img src="/video">
+<div id="previewLabel"></div>
+<br>
+<label>
+<input
+    type="checkbox"
+    id="useLabel"
+    checked>
+ラベルを画像に入れる
+</label>
+<select id="dish">
+<option>1</option>
+<option>2</option>
+<option>3</option>
+<option>4</option>
+</select>
+<select id="polyp">
+<option>A</option>
+<option>B</option>
+<option>C</option>
+<option>D</option>
+<option>E</option>
+<option>R</option>
+</select>
+<br><br>
+<button onclick="captureImage()">
+📷 Capture
+</button>
+<div class="status">
+📷 Camera
+<span id="cameraStatus">
+正常
+</span>
+</div>
+
+<!-- ==========================
+     Image List
+========================== -->
+
+<div class="section">
+📷 Images
+</div>
+
+
+<table id="imageTable">
+
+<tr>
+<th></th>
+<th>A</th>
+<th>B</th>
+<th>C</th>
+<th>D</th>
+<th>E</th>
+<th>R</th>
+</tr>
+
+
+<tr>
+<th>1</th>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+
+
+<tr>
+<th>2</th>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+
+
+<tr>
+<th>3</th>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+
+
+<tr>
+<th>4</th>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+
+
+</table>
+
+
+
+<div>
+未分類：
+<a href="/timeline/unknown">
+<span id="unknownCount">0</span>枚
+</a>
+</div>
+
+<div>
+廃却済み：
+<a href="/timeline/deleted">
+<span id="deletedCount">0</span>枚
+</a>
+</div>
+
+
+
+<!-- ==========================
+     Graph
+========================== -->
+
+
+<div class="section">
+
+🌡 Temperature
+
+</div>
+
+
+<canvas id="tempChart"></canvas>
+
+
+
+
+<div class="section">
+
+💡 Light
+
+</div>
+
+
+<canvas id="luxChart"></canvas>
+
+
+
+
+
+
+
+<script>
+
+
+const labels = [];
+
+const tempData = [];
+
+const luxData = [];
+
+
+
+
+
+const tempChart = new Chart(
+
+document.getElementById("tempChart"),
+
+{
+
+type:"line",
+
+data:{
+
+labels:labels,
+
+datasets:[{
+
+label:"Temperature (℃)",
+
+data:tempData,
+
+tension:0.2
+
+}]
+
+},
+
+
+options:{
+
+animation:false,
+
+scales:{
+
+y:{
+
+min:-5,
+
+max:40
+
+}
+
+}
+
+}
+
+}
+
+);
+
+
+
+
+
+
+const luxChart = new Chart(
+
+document.getElementById("luxChart"),
+
+{
+
+type:"line",
+
+data:{
+
+labels:labels,
+
+datasets:[{
+
+label:"Light (lx)",
+
+data:luxData,
+
+tension:0.2
+
+}]
+
+},
+
+
+options:{
+
+animation:false,
+
+scales:{
+
+y:{
+
+min:0,
+
+max:1000
+
+}
+
+}
+
+}
+
+}
+
+);
+
+
+
+
+
+
+
+
+// ==========================
+// Capture
+// ==========================
+
+
+async function captureImage(){
+
+
+const dish =
+document.getElementById("dish").value;
+
+
+const polyp =
+document.getElementById("polyp").value;
+
+
+
+let label="";
+
+
+
+if(
+document.getElementById("useLabel").checked
+){
+
+label=dish+polyp;
+
+}
+
+
+
+const result =
+document.getElementById("captureResult");
+
+
+
+result.textContent =
+"撮影中...";
+
+
+
+const response =
+await fetch(
+"/capture?label="+label
+);
+
+
+
+if(!response.ok){
+
+
+const data =
+await response.json();
+
+
+result.textContent =
+"⚠ " + data.message;
+
+
+document.getElementById("cameraStatus")
+.textContent =
+"エラー";
+
+
+return;
+
+
+}
+
+
+
+const data =
+await response.json();
+
+
+result.textContent =
+"✅ "+data.filename;
+
+
+// ダウンロード
+const link = document.createElement("a");
+
+link.href =
+"/images/" + data.filename;
+
+link.download =
+data.filename;
+
+
+document.body.appendChild(link);
+
+link.click();
+
+document.body.removeChild(link);
+
+document.getElementById("cameraStatus")
+.textContent =
+"正常";
+
+
+}
+
+
+
+
+
+
+
+
+// ==========================
+// Status
+// ==========================
+
+
+async function updateStatus(){
+
+
+const response =
+await fetch("/status");
+
+
+
+const data =
+await response.json();
+
+
+
+
+document.getElementById("storage")
+.textContent =
+
+data.storage.free
++
+"GB / "
++
+data.storage.total
++
+"GB";
+
+
+
+
+
+
+labels.push("");
+
+
+
+if(data.temperature != null){
+
+tempData.push(
+data.temperature
+);
+
+}else{
+
+tempData.push(null);
+
+}
+
+
+
+
+
+if(data.lux != null){
+
+luxData.push(
+data.lux
+);
+
+}else{
+
+luxData.push(null);
+
+}
+
+if(labels.length > 30){
+
+labels.shift();
+
+tempData.shift();
+
+luxData.shift();
+
+}
+
+
+
+tempChart.update();
+
+luxChart.update();
+
+
+
+
+
+if(data.images){
+
+
+const table =
+document.getElementById("imageTable");
+
+
+
+const groups=[
+
+["1","A","B","C","D","E","R"],
+
+["2","A","B","C","D","E","R"],
+
+["3","A","B","C","D","E","R"],
+
+["4","A","B","C","D","E","R"]
+
+];
+
+
+
+
+for(let r=0;r<4;r++){
+
+
+for(let c=0;c<6;c++){
+
+
+
+const key =
+groups[r][0]
++
+groups[r][c+1];
+
+
+
+const count =
+data.images[key] ?? 0;
+
+
+
+table.rows[r+1]
+.cells[c+1]
+.innerHTML =
+
+`<a href="/timeline/${key}">
+${count}
+</a>`;
+
+
+}
+
+
+
+}
+
+
+
+document.getElementById("unknownCount")
+.textContent =data.images["unknown"] ?? 0;
+
+document.getElementById("deletedCount")
+.textContent =data.images["deleted"] ?? 0;
+
+}
+
+
+
+}
+
+// ==========================
+// Preview Label
+// ==========================
+
+
+function updateLabel(){
+
+
+if(
+!document.getElementById("useLabel").checked
+){
+
+
+document.getElementById("previewLabel")
+.textContent="";
+
+
+return;
+
+}
+
+
+
+const dish =
+document.getElementById("dish").value;
+
+
+const polyp =
+document.getElementById("polyp").value;
+
+
+
+document.getElementById("previewLabel")
+.textContent =
+
+dish + polyp;
+
+
+
+}
+
+
+
+
+
+document.getElementById("dish")
+.onchange =
+updateLabel;
+
+
+document.getElementById("polyp")
+.onchange =
+updateLabel;
+
+
+document.getElementById("useLabel")
+.onchange =
+updateLabel;
+
+
+
+
+
+
+// ==========================
+// Start
+// ==========================
+
+
+updateLabel();
+
+updateStatus();
+
+
+setInterval(
+updateStatus,
+1000
+);
+
+
+
+
+
+
+// ==========================
+// Wake Lock
+// ==========================
+
+
+let wakeLock = null;
+
+
+
+async function requestWakeLock(){
+
+
+if(
+!("wakeLock" in navigator)
+){
+
+return;
+
+}
+
+
+
+try{
+
+
+wakeLock =
+await navigator.wakeLock.request(
+"screen"
+);
+
+
+console.log(
+"Wake Lock ON"
+);
+
+
+
+}catch(err){
+
+
+console.log(err);
+
+
+}
+
+
+
+}
+
+
+
+
+requestWakeLock();
+
+
+
+
+document.addEventListener(
+"visibilitychange",
+()=>{
+
+
+if(
+document.visibilityState
+===
+"visible"
+){
+
+
+requestWakeLock();
+
+
+}
+
+
+}
+
+);
+
+
+
+</script>
+
+
+</body>
+
+</html>
