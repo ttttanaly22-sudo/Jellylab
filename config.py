@@ -15,19 +15,23 @@ CAPTURE_WIDTH = 2560
 CAPTURE_HEIGHT = 1440
 
 
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+
 # -----------------------------
 # Logger
 # -----------------------------
 
 LOG_INTERVAL = 600
-LOG_DIR = "data"
+LOG_DIR = str((PROJECT_ROOT / "logs").resolve())
 
 
 # -----------------------------
 # Paths
 # -----------------------------
 
-IMAGE_DIR = "images"
-MICROSCOPE_IMAGE_DIR = "micro_images"
-LOG_DIR = "logs"
-DATA_DIR = "data"
+IMAGE_DIR = str((PROJECT_ROOT / "images").resolve())
+MICROSCOPE_IMAGE_DIR = str((PROJECT_ROOT / "micro_images").resolve())
+DATA_DIR = str((PROJECT_ROOT / "data").resolve())
+VIDEO_DIR = str((PROJECT_ROOT / "videos").resolve())

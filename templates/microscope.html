@@ -5,38 +5,299 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Microscope</title>
     <style>
-        body { font-family: sans-serif; margin: 32px; }
-        .panel { max-width: 700px; margin: 0 auto; }
-        .box { border: 1px solid #dfe5ec; border-radius: 12px; background: #fff; padding: 20px; }
-        .row { margin: 16px 0; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; }
-        select, button { font-size: 16px; padding: 10px 14px; }
-        button { background: #1fa67a; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        a { display: inline-block; margin-top: 12px; }
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            margin: 10px;
+            background: #f9fafb;
+            color: #1a1a1a;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px;
+        }
+
+        .section {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+
+        .panel {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .preview-box {
+            width: 100%;
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 10px 0 16px;
+        }
+
+        .preview-box img {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+            border: none;
+            background: #e9eef5;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        select {
+            font-size: 18px;
+            padding: 10px 16px;
+            min-width: 220px;
+        }
+
+        button {
+            font-size: 20px;
+            padding: 10px 30px;
+            background: #1fa67a;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .secondary {
+            background: #3b82f6;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 12px 0 20px;
+        }
+
+        .nav-links a {
+            display: inline-block;
+            padding: 10px 22px;
+            background: #1fa67a;
+            color: white;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 0;
+        }
+
+        .nav-links .secondary {
+            background: #3b82f6;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .image-card {
+            background: #ffffff;
+            border: 1px solid #dfe5ec;
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .image-card img {
+            display: block;
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: #eef4f7;
+        }
+
+        .image-card video {
+            display: block;
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: #000;
+        }
+
+        .file-name {
+            margin-top: 8px;
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 16px;
+            color: #1d4ed8;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
     <div class="panel">
-        <h1>顕微鏡モード</h1>
-        <div class="box">
-            <div class="row">
-                <label for="quality">品質</label>
-                <select id="quality">
-                    <option value="preview">Preview</option>
-                    <option value="normal" selected>Normal</option>
-                    <option value="high">High</option>
-                </select>
-            </div>
-            <form action="/microscope/capture" method="post" target="_blank">
-                <div class="row">
-                    <button type="submit">撮影してダウンロード</button>
-                </div>
-            </form>
-            <div class="row">
-                <p>この画面は入口分離のための簡易モジュールです。実際の撮影機能は既存のカメラ制御を再利用して拡張します。</p>
-            </div>
-            <a href="/">ホームへ戻る</a>
+        <div class="title">顕微鏡モード</div>
+
+        <div class="nav-links">
+            <a href="/">Homeへ戻る</a>
         </div>
+
+        <div class="section">Preview</div>
+        <div class="preview-box">
+            <img src="/video" alt="MicroScope preview">
+        </div>
+
+        <div class="controls">
+            <button id="saveButton" type="button">保存</button>
+            <button id="videoButton" type="button" class="secondary">動画撮影</button>
+        </div>
+
+        <div class="section">保存ファイル一覧</div>
+        {% if images %}
+            <div class="image-grid">
+                {% for image in images %}
+                    <div class="image-card">
+                        <a href="/micro_images/{{ image.name }}" target="_blank">
+                            <img src="/micro_images/{{ image.name }}" alt="{{ image.name }}">
+                        </a>
+                        <div class="file-name">{{ image.name }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>保存されたファイルはまだありません。</p>
+        {% endif %}
+        
+        <div class="section">動画一覧</div>
+
+        {% if videos %}
+            <div class="image-grid">
+                {% for video in videos %}
+                    <div class="image-card">
+
+                        <video controls preload="auto" width="100%">
+                            <source src="/videos/{{ video.name }}">
+                            動画を再生できません
+                        </video>
+                        <a href="/video_download/{{ video.name }}">
+                        ダウンロード
+                        </a>
+
+                        <div class="file-name">
+                            {{ video.name }}
+                        </div>
+
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>保存された動画はまだありません。</p>
+        {% endif %}
+        <a href="/">Homeへ戻る</a>
     </div>
+
+    <script>
+        const videoButton = document.getElementById('videoButton');
+
+        async function downloadCapture(actionUrl) {
+            const response = await fetch(actionUrl, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                let message = '保存に失敗しました';
+                try {
+                    const data = await response.json();
+                    if (data && data.message) {
+                        message = data.message;
+                    }
+                } catch (error) {
+                    // ignore JSON parse error
+                }
+                alert(message);
+                return;
+            }
+
+            const data = await response.json();
+            const filename = data.filename || 'download';
+            const link = document.createElement('a');
+            link.href = '/micro_images/' + filename;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        document.getElementById('saveButton').addEventListener('click', function () {
+            downloadCapture('/microscope/capture');
+        });
+
+        async function stopVideoRecording() {
+            const response = await fetch('/microscope/video_stop', {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+            videoButton.textContent = '動画撮影';
+            videoButton.dataset.recording = 'false';
+            videoButton.disabled = false;
+
+            if (data && data.filename) {
+                const link = document.createElement('a');
+                link.href = '/videos/' + data.filename;
+                link.download = data.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        async function startVideoRecording() {
+            const response = await fetch('/microscope/video_capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'start' })
+            });
+
+            const data = await response.json();
+
+            if (!data || !data.ok) {
+                alert('動画撮影を開始できませんでした');
+                return;
+            }
+
+            videoButton.textContent = '録画停止';
+            videoButton.dataset.recording = 'true';
+            }
+
+            videoButton.addEventListener('click', async function () {
+                if (videoButton.dataset.recording === 'true') {
+                    await stopVideoRecording();
+                    return;
+            }
+
+            await startVideoRecording();
+        });
+
+        window.addEventListener('beforeunload', function () {
+            if (videoButton.dataset.recording === 'true') {
+                navigator.sendBeacon('/microscope/video_stop', new Blob([], { type: 'application/json' }));
+            }
+        });
+    </script>
 </body>
 </html>

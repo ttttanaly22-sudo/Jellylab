@@ -16,11 +16,14 @@ from managers.logger_manager import start_logger
 from camera.camera_manager import CameraManager
 from managers.system_manager import get_storage
 from managers.image_manager import get_image_count
-from config import MICROSCOPE_IMAGE_DIR
+from config import IMAGE_DIR as CONFIG_IMAGE_DIR, MICROSCOPE_IMAGE_DIR, VIDEO_DIR
 
 
 app = Flask(__name__)
 
+VIDEO_OUTPUT_DIR = Path(VIDEO_DIR)
+
+MAX_VIDEO_DURATION = 120.0
 
 camera = CameraManager()
 
@@ -65,10 +68,38 @@ def jellylab():
     )
 
 
+@app.route("/preview")
+def preview():
+
+    return redirect("/microscope", code=302)
+
+
 @app.route("/microscope")
 def microscope():
 
-    return render_template("microscope.html")
+    image_dir = Path(MICROSCOPE_IMAGE_DIR)
+    image_dir.mkdir(parents=True, exist_ok=True)
+
+    video_dir = Path(VIDEO_DIR)
+    video_dir.mkdir(parents=True, exist_ok=True)
+
+    images = sorted(
+        image_dir.glob("*.jpg"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True
+    )
+
+    videos = sorted(
+        video_dir.glob("*.mp4"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True
+    )
+
+    return render_template(
+        "microscope.html",
+        images=images,
+        videos=videos
+    )
 
 
 @app.route("/microscope/capture", methods=["POST"])
@@ -84,11 +115,68 @@ def microscope_capture():
             }
         ), 500
 
-    return send_file(
-        filename,
-        mimetype="image/jpeg",
-        as_attachment=True,
-        download_name=filename.name
+    return jsonify(
+        {
+            "ok": True,
+            "filename": filename.name
+        }
+    )
+
+
+@app.route("/microscope/video_capture", methods=["POST"])
+def microscope_video_capture():
+
+    try:
+        payload = request.get_json(silent=True) or {}
+    except Exception:
+        payload = {}
+
+    action = (payload.get("action") or request.form.get("action") or "start").strip().lower()
+
+    if action == "stop":
+        filename = camera.stop_recording()
+        return jsonify(
+            {
+                "ok": True,
+                "recording": False,
+                "filename": filename.name if filename is not None else None
+            }
+        )
+
+    if camera.recording_stop_event is not None and camera.recording_stop_event.is_set() is False:
+        return jsonify({"ok": True, "recording": True})
+
+    duration = request.form.get("duration", str(MAX_VIDEO_DURATION))
+
+    try:
+        duration = float(duration)
+    except (TypeError, ValueError):
+        duration = MAX_VIDEO_DURATION
+
+    duration = max(1.0, min(duration, MAX_VIDEO_DURATION))
+
+    camera.start_recording(duration=duration, output_dir=VIDEO_OUTPUT_DIR)
+
+    return jsonify(
+        {
+            "ok": True,
+            "recording": True,
+            "duration": duration
+        }
+    )
+
+
+@app.route("/microscope/video_stop", methods=["POST"])
+def microscope_video_stop():
+
+    filename = camera.stop_recording()
+
+    return jsonify(
+        {
+            "ok": True,
+            "recording": False,
+            "filename": filename.name if filename is not None else None
+        }
     )
 
 
@@ -97,6 +185,25 @@ def serve_micro_image(filename):
 
     return send_file(
         Path(MICROSCOPE_IMAGE_DIR) / filename
+    )
+
+
+@app.route("/videos/<filename>")
+def serve_video(filename):
+
+    return send_file(
+        VIDEO_OUTPUT_DIR / filename,
+        mimetype="video/mp4"
+    )
+
+@app.route("/video_download/<filename>")
+def download_video(filename):
+
+    return send_file(
+        VIDEO_OUTPUT_DIR / filename,
+        mimetype="video/mp4",
+        as_attachment=True,
+        download_name=filename
     )
 
 
@@ -153,7 +260,7 @@ def status_route():
 # Image
 # -----------------------------
 
-IMAGE_DIR = Path("images")
+IMAGE_DIR = (Path(__file__).resolve().parent / CONFIG_IMAGE_DIR).resolve()
 
 
 TIMELINE_PREFIXES = [
