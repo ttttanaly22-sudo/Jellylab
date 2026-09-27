@@ -159,7 +159,7 @@ class CameraManager:
         writer = None
 
         try:
-            print("record start")
+            print("record start", flush=True)
             directory = self.resolve_output_dir(output_dir)
             directory.mkdir(parents=True, exist_ok=True)
 
@@ -220,7 +220,7 @@ class CameraManager:
 
             writer.release()
             writer = None
-            print("writer release")
+            print("writer release", flush=True)
 
             # 一時ファイル確認
             if not temp_filename.exists() or temp_filename.stat().st_size == 0:
@@ -235,7 +235,32 @@ class CameraManager:
 
             # mp4v → H.264
             import subprocess
-            print("ffmpeg start")
+            thread = threading.Thread(
+                target=self.convert_video_async,
+                args=(temp_filename, final_filename),
+                daemon=True
+            )
+
+            thread.start()
+
+            print(
+                f"video recording complete: {temp_filename}",
+                flush=True
+            )
+
+            return temp_filename
+
+        finally:
+            if writer is not None:
+                writer.release()
+
+    def convert_video_async(self, temp_filename, final_filename):
+
+        import subprocess
+
+        try:
+            print("ffmpeg start", flush=True)
+
             result = subprocess.run(
                 [
                     "ffmpeg",
@@ -243,7 +268,7 @@ class CameraManager:
                     "-i", str(temp_filename),
                     "-c:v", "libx264",
                     "-crf", "23",
-                    "-preset", "veryfast",
+                    "-preset", "ultrafast",
                     "-pix_fmt", "yuv420p",
                     "-movflags", "+faststart",
                     str(final_filename)
@@ -252,55 +277,30 @@ class CameraManager:
                 stderr=subprocess.PIPE,
                 text=True
             )
-            
-            print("ffmpeg end")
-            
+
+            print("ffmpeg end", flush=True)
+
             if result.returncode != 0:
-                print("ffmpeg conversion failed:")
+
+                print("ffmpeg conversion failed")
                 print(result.stderr)
 
-                if final_filename.exists():
-                    final_filename.unlink()
+                return
 
-                return None
-
-            # 変換後ファイル確認
-            if not final_filename.exists() or final_filename.stat().st_size == 0:
-                print("converted video is empty")
-
-                if final_filename.exists():
-                    final_filename.unlink()
-
-                return None
-
-            # H.264変換成功
-            # 元のmp4vファイルを削除
-            temp_filename.unlink()
+            if temp_filename.exists():
+                temp_filename.unlink()
 
             print(
-                f"video saved: {final_filename} "
-                f"({final_filename.stat().st_size} bytes)"
+                f"video converted: {final_filename}",
+                flush=True
             )
 
-            return final_filename
+        except Exception as e:
 
-        finally:
-            if writer is not None:
-                writer.release()
-
-            # 変換失敗などでtempファイルだけ残っていた場合は削除
-            if (
-                temp_filename is not None
-                and temp_filename.exists()
-                and (
-                    final_filename is None
-                    or not final_filename.exists()
-                )
-            ):
-                try:
-                    temp_filename.unlink()
-                except Exception:
-                    pass
+            print(
+                f"video convert exception: {e}",
+                flush=True
+            )
 
     def start_recording(self, duration=120, output_dir="videos", fps=20):
 
