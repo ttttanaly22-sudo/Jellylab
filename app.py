@@ -28,6 +28,19 @@ MAX_VIDEO_DURATION = 120.0
 camera = CameraManager()
 
 
+def get_video_status(filename):
+    status_reader = getattr(camera, "get_video_conversion_status", None)
+    if status_reader is None:
+        return "unknown"
+    return status_reader(filename)
+
+
+def can_serve_video(filename):
+    if filename.endswith("_temp.mp4"):
+        return False
+    return get_video_status(filename) not in {"pending", "failed"}
+
+
 # -----------------------------
 # Camera stream
 # -----------------------------
@@ -90,7 +103,10 @@ def microscope():
     )
 
     videos = sorted(
-        video_dir.glob("*.mp4"),
+        (
+            path for path in video_dir.glob("*.mp4")
+            if can_serve_video(path.name)
+        ),
         key=lambda path: path.stat().st_mtime,
         reverse=True
     )
@@ -180,6 +196,18 @@ def microscope_video_stop():
     )
 
 
+@app.route("/video_status/<filename>")
+def video_status(filename):
+    if filename.endswith("_temp.mp4"):
+        return jsonify({"status": "unavailable"}), 404
+
+    status = get_video_status(filename)
+    if status == "unknown" and (VIDEO_OUTPUT_DIR / filename).is_file():
+        status = "ready"
+
+    return jsonify({"status": status})
+
+
 @app.route("/micro_images/<filename>")
 def serve_micro_image(filename):
 
@@ -191,6 +219,9 @@ def serve_micro_image(filename):
 @app.route("/videos/<filename>")
 def serve_video(filename):
 
+    if not can_serve_video(filename):
+        return jsonify({"error": "video is not ready"}), 404
+
     return send_file(
         VIDEO_OUTPUT_DIR / filename,
         mimetype="video/mp4"
@@ -198,6 +229,9 @@ def serve_video(filename):
 
 @app.route("/video_download/<filename>")
 def download_video(filename):
+
+    if not can_serve_video(filename):
+        return jsonify({"error": "video is not ready"}), 404
 
     return send_file(
         VIDEO_OUTPUT_DIR / filename,

@@ -257,6 +257,12 @@
             videoButton.disabled = false;
 
             if (data && data.filename) {
+                const ready = await waitForVideoReady(data.filename);
+                if (!ready) {
+                    alert('動画の変換に失敗したか、状態を確認できませんでした');
+                    return;
+                }
+
                 const link = document.createElement('a');
                 link.href = '/videos/' + data.filename;
                 link.download = data.filename;
@@ -264,6 +270,31 @@
                 link.click();
                 document.body.removeChild(link);
             }
+        }
+
+        async function waitForVideoReady(filename) {
+            for (let attempt = 0; attempt < 600; attempt++) {
+                const response = await fetch(
+                    '/video_status/' + encodeURIComponent(filename),
+                    { cache: 'no-store' }
+                );
+
+                if (!response.ok) {
+                    return false;
+                }
+
+                const data = await response.json();
+                if (data.status === 'ready') {
+                    return true;
+                }
+                if (data.status === 'failed' || data.status === 'unknown') {
+                    return false;
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            return false;
         }
 
         async function startVideoRecording() {

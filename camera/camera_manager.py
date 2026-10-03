@@ -38,6 +38,8 @@ class CameraManager:
         self.recording_output = None
         self.recording_started_at = None
         self.recording_active = False
+        self.video_conversion_status = {}
+        self.video_status_lock = threading.Lock()
 
         self.set_preview()
 
@@ -241,6 +243,9 @@ class CameraManager:
                 daemon=True
             )
 
+            with self.video_status_lock:
+                self.video_conversion_status[final_filename.name] = "pending"
+
             thread.start()
 
             print(
@@ -248,7 +253,7 @@ class CameraManager:
                 flush=True
             )
 
-            return temp_filename
+            return final_filename
 
         finally:
             if writer is not None:
@@ -285,10 +290,16 @@ class CameraManager:
                 print("ffmpeg conversion failed")
                 print(result.stderr)
 
+                with self.video_status_lock:
+                    self.video_conversion_status[final_filename.name] = "failed"
+
                 return
 
             if temp_filename.exists():
                 temp_filename.unlink()
+
+            with self.video_status_lock:
+                self.video_conversion_status[final_filename.name] = "ready"
 
             print(
                 f"video converted: {final_filename}",
@@ -297,10 +308,17 @@ class CameraManager:
 
         except Exception as e:
 
+            with self.video_status_lock:
+                self.video_conversion_status[final_filename.name] = "failed"
+
             print(
                 f"video convert exception: {e}",
                 flush=True
             )
+
+    def get_video_conversion_status(self, filename):
+        with self.video_status_lock:
+            return self.video_conversion_status.get(filename, "unknown")
 
     def start_recording(self, duration=120, output_dir="videos", fps=20):
 
@@ -342,7 +360,10 @@ class CameraManager:
             videos_dir = self.resolve_output_dir(VIDEO_DIR)
             if videos_dir.exists():
                 candidates = sorted(
-                    videos_dir.glob("micro_video_*.mp4"),
+                    (
+                        path for path in videos_dir.glob("micro_video_*.mp4")
+                        if not path.name.endswith("_temp.mp4")
+                    ),
                     key=lambda p: p.stat().st_mtime,
                     reverse=True
                 )
