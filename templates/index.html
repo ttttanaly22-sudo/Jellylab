@@ -3,8 +3,6 @@
 
 <head>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 
@@ -137,7 +135,11 @@ th{
 
 canvas{
 
+    width:100%;
+
     max-width:900px;
+
+    height:320px;
 
 }
 
@@ -324,103 +326,98 @@ const luxData = [];
 
 
 
-const tempChart = new Chart(
+function createLineChart(canvas, series, title, minValue, maxValue){
 
-document.getElementById("tempChart"),
+    const context = canvas.getContext("2d");
 
-{
+    return {
+        update(){
+            if(!context){
+                throw new Error("Canvas 2D context is unavailable");
+            }
 
-type:"line",
+            const width = canvas.clientWidth || 900;
+            const height = canvas.clientHeight || 320;
+            const scale = window.devicePixelRatio || 1;
 
-data:{
+            canvas.width = Math.round(width * scale);
+            canvas.height = Math.round(height * scale);
+            context.setTransform(scale, 0, 0, scale, 0, 0);
+            context.clearRect(0, 0, width, height);
 
-labels:labels,
+            const left = 52;
+            const right = width - 12;
+            const top = 28;
+            const bottom = height - 28;
+            const plotWidth = right - left;
+            const plotHeight = bottom - top;
 
-datasets:[{
+            context.font = "12px sans-serif";
+            context.textBaseline = "middle";
+            context.fillStyle = "#333";
+            context.textAlign = "left";
+            context.fillText(title, left, 12);
 
-label:"Temperature (℃)",
+            for(let tick = 0; tick <= 5; tick++){
+                const ratio = tick / 5;
+                const y = top + plotHeight * ratio;
+                const value = maxValue - (maxValue - minValue) * ratio;
 
-data:tempData,
+                context.strokeStyle = "#ddd";
+                context.beginPath();
+                context.moveTo(left, y);
+                context.lineTo(right, y);
+                context.stroke();
 
-tension:0.2
+                context.textAlign = "right";
+                context.fillStyle = "#555";
+                context.fillText(value.toFixed(0), left - 8, y);
+            }
 
-}]
+            context.strokeStyle = "#2878b5";
+            context.lineWidth = 2;
+            context.beginPath();
 
-},
+            let drawing = false;
+            series.forEach((value, index) => {
+                if(value == null || !Number.isFinite(Number(value))){
+                    drawing = false;
+                    return;
+                }
 
+                const x = series.length <= 1
+                    ? left + plotWidth / 2
+                    : left + plotWidth * index / (series.length - 1);
+                const ratio = (Number(value) - minValue) / (maxValue - minValue);
+                const y = bottom - Math.max(0, Math.min(1, ratio)) * plotHeight;
 
-options:{
+                if(drawing){
+                    context.lineTo(x, y);
+                }else{
+                    context.moveTo(x, y);
+                    drawing = true;
+                }
+            });
 
-animation:false,
-
-scales:{
-
-y:{
-
-min:-5,
-
-max:40
-
+            context.stroke();
+        }
+    };
 }
 
-}
-
-}
-
-}
-
+const tempChart = createLineChart(
+    document.getElementById("tempChart"),
+    tempData,
+    "Temperature (℃)",
+    -5,
+    40
 );
 
-
-
-
-
-
-const luxChart = new Chart(
-
-document.getElementById("luxChart"),
-
-{
-
-type:"line",
-
-data:{
-
-labels:labels,
-
-datasets:[{
-
-label:"Light (lx)",
-
-data:luxData,
-
-tension:0.2
-
-}]
-
-},
-
-
-options:{
-
-animation:false,
-
-scales:{
-
-y:{
-
-min:0,
-
-max:1000
-
-}
-
-}
-
-}
-
-}
-
+const luxChart = createLineChart(
+    document.getElementById("luxChart"),
+    luxData,
+    "Light (lx)",
+    0,
+    1000
 );
 
 
@@ -546,87 +543,61 @@ document.getElementById("cameraStatus")
 
 async function updateStatus(){
 
-
-const response =
-await fetch("/status");
-
-
-
-const data =
-await response.json();
-
-
-
-
-document.getElementById("storage")
-.textContent =
-
-data.storage.free
-+
-"GB / "
-+
-data.storage.total
-+
-"GB";
+let data;
+try {
+    const response = await fetch("/status");
+    if(!response.ok){
+        throw new Error(`/status returned HTTP ${response.status}`);
+    }
+    data = await response.json();
+} catch(error) {
+    console.error("[updateStatus] Failed to fetch or parse /status:", error);
+    return;
+}
 
 
 
 
-
-
-labels.push("");
-
-
-
-if(data.temperature != null){
-
-tempData.push(
-data.temperature
-);
-
-}else{
-
-tempData.push(null);
-
+try {
+    if(!data.storage){
+        throw new Error("/status response is missing storage data");
+    }
+    document.getElementById("storage").textContent =
+        `${data.storage.free}GB / ${data.storage.total}GB`;
+} catch(error) {
+    console.error("[updateStatus] Failed to update storage display:", error);
 }
 
 
 
 
 
-if(data.lux != null){
 
-luxData.push(
-data.lux
-);
+try {
+    labels.push("");
+    tempData.push(data.temperature ?? null);
+    luxData.push(data.lux ?? null);
 
-}else{
+    if(labels.length > 30){
+        labels.shift();
+        tempData.shift();
+        luxData.shift();
+    }
 
-luxData.push(null);
-
-}
-
-if(labels.length > 30){
-
-labels.shift();
-
-tempData.shift();
-
-luxData.shift();
-
+    tempChart.update();
+    luxChart.update();
+} catch(error) {
+    console.error("[updateStatus] Failed to update temperature/light charts:", error);
 }
 
 
 
-tempChart.update();
-
-luxChart.update();
 
 
-
-
-
-if(data.images){
+try {
+    if(!data.images || typeof data.images !== "object" || Array.isArray(data.images)){
+        throw new Error("/status response is missing the images count object");
+    }
 
 
 const table =
@@ -690,10 +661,9 @@ document.getElementById("unknownCount")
 
 document.getElementById("deletedCount")
 .textContent =data.images["deleted"] ?? 0;
-
+} catch(error) {
+    console.error("[updateStatus] Failed to update image counts:", error);
 }
-
-
 
 }
 
